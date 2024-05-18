@@ -1,12 +1,13 @@
+
 [submodule "interbotix_ros_manipulators"]
 	path = interbotix_ros_manipulators
 	url = https://github.com/Interbotix/interbotix_ros_manipulators.git
-	branch = noetic
+	branch = humble
 [submodule "interbotix_ros_toolboxes"]
 	path = interbotix_ros_toolboxes
 	url = https://github.com/Interbotix/interbotix_ros_toolboxes.git
-	branch = noetic
+	branch = humble
 [submodule "interbotix_ros_core"]
 	path = interbotix_ros_core
 	url = https://github.com/Interbotix/interbotix_ros_core.git
-	branch = noetic
+	branch = humble
