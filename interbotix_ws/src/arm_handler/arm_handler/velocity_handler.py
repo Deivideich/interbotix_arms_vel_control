@@ -3,7 +3,7 @@ from rclpy.node import Node
 from interbotix_xs_msgs.msg import *
 from interbotix_xs_msgs.srv import *
 from geometry_msgs.msg import Twist
-from std_msgs.msg import Float64, Float64MultiArray
+from std_msgs.msg import Float32, Float32MultiArray
 from sensor_msgs.msg import JointState
 import math as m
 
@@ -13,7 +13,13 @@ class interbotix_arm_handler(Node):
         self.mode = 'position'
         self.joint_limits_subscriber = self.create_subscription(JointState, '/wx250s/joint_states', self.check_arm_limits, 10)
         self.velocity_publisher = self.create_publisher(JointGroupCommand, '/wx250s/commands/joint_group', 10)
-        self.velocity_subscriber = self.create_subscription(JointGroupCommand, '/matlab/velocities', self.callback,10)
+        self.waist_velocity_subscriber = self.create_subscription(Float32, '/matlab/waist_velocity', self.waist_callback, 10)
+        self.shoulder_velocity_subscriber = self.create_subscription(Float32, '/matlab/shoulder_velocity', self.shoulder_callback, 10)
+        self.elbow_velocity_subscriber = self.create_subscription(Float32, '/matlab/elbow_velocity', self.elbow_callback, 10)
+        self.forearm_roll_velocity_subscriber = self.create_subscription(Float32, '/matlab/forearm_roll_velocity', self.forearm_roll_callback, 10)
+        self.wrist_angle_velocity_subscriber = self.create_subscription(Float32, '/matlab/wrist_angle_velocity', self.wrist_angle_callback, 10)
+        self.wrist_rotate_velocity_subscriber = self.create_subscription(Float32, '/matlab/wrist_rotate_velocity', self.wrist_rotate_callback, 10)
+        self.gripper_velocity_subscriber = self.create_subscription(Float32, '/matlab/gripper_velocity', self.gripper_callback, 10)
         self.waist_velocity = 0.0
         self.shoulder_velocity = 0.0
         self.elbow_velocity = 0.0
@@ -21,7 +27,37 @@ class interbotix_arm_handler(Node):
         self.wrist_angle_velocity = 0.0
         self.wrist_rotate_velocity = 0.0
         self.gripper_velocity = 0.0
+        self.set_velocities()
+        
+    def waist_callback(self, msg):
+        self.waist_velocity = msg.data
+        self.set_velocities()
     
+    def shoulder_callback(self, msg):
+        self.shoulder_velocity = msg.data
+        self.set_velocities()
+
+    def elbow_callback(self, msg):
+        print(msg.data)
+        self.elbow_velocity = msg.data
+        self.set_velocities()
+
+    def forearm_roll_callback(self, msg):
+        self.forearm_roll_velocity = msg.data
+        self.set_velocities()
+
+    def wrist_angle_callback(self, msg):
+        self.wrist_angle_velocity = msg.data
+        self.set_velocities()
+
+    def wrist_rotate_callback(self, msg):
+        self.wrist_rotate_velocity = msg.data
+        self.set_velocities()
+
+    def gripper_callback(self, msg):
+        self.gripper_velocity = msg.data
+        self.set_velocities()
+        
     def set_mode(self, mode):
         self.mode = mode
         req = OperatingModes.Request()
@@ -41,9 +77,17 @@ class interbotix_arm_handler(Node):
         joint_states = msg.position
         for i in range (0, 6):
              if abs(joint_states[i]) > 2*m.pi:
-                 self.set_velocity([0.0]*9)
-                 break
+                 print('Joint limit reached')
+                 #self.set_velocity([0.0]*7)
                  
+    def set_velocities(self):
+        velocities = [self.waist_velocity, self.shoulder_velocity, self.elbow_velocity, self.forearm_roll_velocity, self.wrist_angle_velocity, self.wrist_rotate_velocity, self.gripper_velocity]
+        msg = JointGroupCommand()
+        msg.name = 'all'
+        msg.cmd = velocities
+        self.velocity_publisher.publish(msg)
+
+def main(args=None):
     #velocities are:
     #1-waist
     #2-shoulder
@@ -52,35 +96,10 @@ class interbotix_arm_handler(Node):
     #5-wrist_angle
     #6-wrist_rotate
     #7-gripper
-    def set_velocity(self, velocities):
-        msg = JointGroupCommand()
-        msg.cmd = velocities
-        for i in range (0,1):
-            velocities.append(0.0)
-        msg.name = 'all'
-        self.velocity_publisher.publish(msg)
-
-    def callback(self, msg):
-        self.velocity_publisher.publish(msg)
-
-def main(args=None):
     rclpy.init(args=args)
-
     interbotix_handler = interbotix_arm_handler()
     interbotix_handler.set_mode('velocity')
-    waist_velocity = 0.0
-    shoulder_velocity = 0.0
-    elbow_velocity = 0.0
-    forearm_roll_velocity = 0.0
-    wrist_angle_velocity = 0.0
-    wrist_rotate_velocity = 0.0
-    gripper_velocity = 0.0
-    interbotix_handler.set_velocity([waist_velocity,shoulder_velocity,elbow_velocity,forearm_roll_velocity,wrist_angle_velocity,wrist_rotate_velocity,gripper_velocity])
     rclpy.spin(interbotix_handler)
-
-    # Destroy the node explicitly
-    # (optional - otherwise it will be done automatically
-    # when the garbage collector destroys the node object)
     interbotix_handler.destroy_node()
     rclpy.shutdown()
 
