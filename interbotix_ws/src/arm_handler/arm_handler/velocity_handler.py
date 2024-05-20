@@ -84,15 +84,16 @@ class interbotix_arm_handler(Node):
     def set_velocities(self):
         print('setting velocities')
         velocities = [self.waist_velocity, self.shoulder_velocity, self.elbow_velocity, self.forearm_roll_velocity, self.wrist_angle_velocity, self.wrist_rotate_velocity, self.gripper_velocity]
-        print(velocities)
+        #print(velocities)
         self.set_velocity(velocities)
 
     def set_velocity(self, velocities):
         msg = JointGroupCommand()
-        # for i in range (0,1):
-        #     velocities.append(0.0)
+        #for i in range (0,8):
+        #    velocities.append(0.0)
         msg.name = 'all'
         msg.cmd = velocities
+        print(msg)
         self.velocity_publisher.publish(msg)
 
     def callback(self, msg):
@@ -112,6 +113,10 @@ def main(args=None):
     rclpy.init(args=args)
     interbotix_handler = interbotix_arm_handler()
     interbotix_handler.set_mode('velocity')
+    msg = JointGroupCommand()
+    msg.name = 'all'
+    msg.cmd = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    interbotix_handler.velocity_publisher.publish(msg)
     rclpy.spin(interbotix_handler)
     interbotix_handler.destroy_node()
     rclpy.shutdown()
