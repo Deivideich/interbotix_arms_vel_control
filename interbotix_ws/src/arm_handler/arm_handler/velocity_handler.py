@@ -13,6 +13,7 @@ class interbotix_arm_handler(Node):
         self.mode = 'position'
         self.joint_limits_subscriber = self.create_subscription(JointState, '/wx250s/joint_states', self.check_arm_limits, 10)
         self.velocity_publisher = self.create_publisher(JointGroupCommand, '/wx250s/commands/joint_group', 10)
+        self.velocity_subscriber = self.create_subscription(JointGroupCommand, '/matlab/velocities', self.callback,10)
         self.waist_velocity_subscriber = self.create_subscription(Float32, '/matlab/waist_velocity', self.waist_callback, 10)
         self.shoulder_velocity_subscriber = self.create_subscription(Float32, '/matlab/shoulder_velocity', self.shoulder_callback, 10)
         self.elbow_velocity_subscriber = self.create_subscription(Float32, '/matlab/elbow_velocity', self.elbow_callback, 10)
@@ -81,11 +82,23 @@ class interbotix_arm_handler(Node):
                  #self.set_velocity([0.0]*7)
                  
     def set_velocities(self):
+        print('setting velocities')
         velocities = [self.waist_velocity, self.shoulder_velocity, self.elbow_velocity, self.forearm_roll_velocity, self.wrist_angle_velocity, self.wrist_rotate_velocity, self.gripper_velocity]
+        print(velocities)
+        self.set_velocity(velocities)
+
+    def set_velocity(self, velocities):
         msg = JointGroupCommand()
+        # for i in range (0,1):
+        #     velocities.append(0.0)
         msg.name = 'all'
         msg.cmd = velocities
         self.velocity_publisher.publish(msg)
+
+    def callback(self, msg):
+        self.velocity_publisher.publish(msg)
+
+
 
 def main(args=None):
     #velocities are:
