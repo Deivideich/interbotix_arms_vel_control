@@ -13,7 +13,6 @@ class interbotix_arm_handler(Node):
         self.mode = 'position'
         self.joint_limits_subscriber = self.create_subscription(JointState, '/wx250s/joint_states', self.check_arm_limits, 10)
         self.velocity_publisher = self.create_publisher(JointGroupCommand, '/wx250s/commands/joint_group', 10)
-        self.velocity_subscriber = self.create_subscription(JointGroupCommand, '/matlab/velocities', self.callback,10)
         self.waist_velocity_subscriber = self.create_subscription(Float32, '/matlab/waist_velocity', self.waist_callback, 10)
         self.shoulder_velocity_subscriber = self.create_subscription(Float32, '/matlab/shoulder_velocity', self.shoulder_callback, 10)
         self.elbow_velocity_subscriber = self.create_subscription(Float32, '/matlab/elbow_velocity', self.elbow_callback, 10)
@@ -28,7 +27,6 @@ class interbotix_arm_handler(Node):
         self.wrist_angle_velocity = 0.0
         self.wrist_rotate_velocity = 0.0
         self.gripper_velocity = 0.0
-        self.set_velocities()
         
     def waist_callback(self, msg):
         self.waist_velocity = msg.data
@@ -39,7 +37,6 @@ class interbotix_arm_handler(Node):
         self.set_velocities()
 
     def elbow_callback(self, msg):
-        print(msg.data)
         self.elbow_velocity = msg.data
         self.set_velocities()
 
@@ -79,24 +76,13 @@ class interbotix_arm_handler(Node):
         for i in range (0, 6):
              if abs(joint_states[i]) > 2*m.pi:
                  print('Joint limit reached')
-                 #self.set_velocity([0.0]*7)
-                 
+                 self.set_velocity([0.0]*7)
+    
     def set_velocities(self):
-        print('setting velocities')
         velocities = [self.waist_velocity, self.shoulder_velocity, self.elbow_velocity, self.forearm_roll_velocity, self.wrist_angle_velocity, self.wrist_rotate_velocity, self.gripper_velocity]
-        #print(velocities)
-        self.set_velocity(velocities)
-
-    def set_velocity(self, velocities):
         msg = JointGroupCommand()
-        #for i in range (0,8):
-        #    velocities.append(0.0)
         msg.name = 'all'
         msg.cmd = velocities
-        print(msg)
-        self.velocity_publisher.publish(msg)
-
-    def callback(self, msg):
         self.velocity_publisher.publish(msg)
 
 
