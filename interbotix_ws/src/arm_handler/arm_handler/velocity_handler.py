@@ -6,6 +6,7 @@ from geometry_msgs.msg import Twist
 from std_msgs.msg import Float32, Float32MultiArray
 from sensor_msgs.msg import JointState
 import math as m
+import time as t
 
 class interbotix_arm_handler(Node):
     def __init__(self):
@@ -65,25 +66,161 @@ class interbotix_arm_handler(Node):
         req.profile_type = 'velocity'
         req.profile_velocity = 131
         req.profile_acceleration = 15
-        add_two_ints = self.create_client(OperatingModes, '/wx250s/set_operating_modes')
-        while not add_two_ints.wait_for_service(timeout_sec=1.0):
+        set_operating_mode = self.create_client(OperatingModes, '/wx250s/set_operating_modes')
+        while not set_operating_mode.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('service not available, waiting again...')
-        resp = add_two_ints.call_async(req)
+        resp = set_operating_mode.call_async(req)
         rclpy.spin_until_future_complete(self, resp)
+
+    def check_currents(self):
+        self.get_logger().info('Checking currents')
+        req = RegisterValues.Request()
+        req.cmd_type = 'group'
+        req.name = 'all'
+        req.reg = 'Present_Current'
+        req.value = 0
+        get_currents = self.create_client(RegisterValues, '/wx250s/get_motor_registers')
+        while not get_currents.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('service not available, waiting again...')
+        resp = get_currents.call_async(req)
+        rclpy.spin_until_future_complete(self, resp)
+        if resp.result() is not None:
+            self.get_logger().info(f'Current check response: {resp.result()}')
+        else:
+            self.get_logger().info('Current check request failed')
+
+    def set_currents(self):
+        #Change in order to work for all motors
+        self.get_logger().info('Setting currents')
+        req = RegisterValues.Request()
+        req.cmd_type = 'single'
+        req.name = 'waist'
+        req.reg = 'Goal_Current'
+        req.value = 100
+        set_currents = self.create_client(RegisterValues, '/wx250s/set_motor_registers')
+        while not set_currents.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('service not available, waiting again...')
+        resp = set_currents.call_async(req)
+        rclpy.spin_until_future_complete(self, resp)
+        if resp.result() is not None:
+            self.get_logger().info(f'Current set response: {resp.result()}')
+        else:
+            self.get_logger().info('Current set request failed')
+
+    def set_pwm(self):
+        #Change in order to work for all motors
+        self.get_logger().info('Setting PWM')
+        req = RegisterValues.Request()
+        req.cmd_type = 'single'
+        req.name = 'waist'
+        req.reg = 'Goal_PWM'
+        req.value = 100
+        set_pwm = self.create_client(RegisterValues, '/wx250s/set_motor_registers')
+        while not set_pwm.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('service not available, waiting again...')
+        resp = set_pwm.call_async(req)
+        rclpy.spin_until_future_complete(self, resp)
+        if resp.result() is not None:
+            self.get_logger().info(f'PWM set response: {resp.result()}')
+        else:
+            self.get_logger().info('PWM set request failed')
+
+    def set_goal_velocity(self):
+        self.get_logger().info('Setting goal velocity')
+        req = RegisterValues.Request()
+        req.cmd_type = 'single'
+        req.name = 'waist'
+        req.reg = 'Goal_Velocity'
+        req.value = 100
+        set_goal_velocity = self.create_client(RegisterValues, '/wx250s/set_motor_registers')
+        while not set_goal_velocity.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('service not available, waiting again...')
+        resp = set_goal_velocity.call_async(req)
+        rclpy.spin_until_future_complete(self, resp)
+        if resp.result() is not None:
+            self.get_logger().info(f'Goal velocity set response: {resp.result()}')
+        else:
+            self.get_logger().info('Goal velocity set request failed')
+
+    def set_goal_position(self):
+        self.get_logger().info('Setting goal position')
+        req = RegisterValues.Request()
+        req.cmd_type = 'single'
+        req.name = 'waist'
+        req.reg = 'Goal_Position'
+        req.value = 100
+        set_goal_position = self.create_client(RegisterValues, '/wx250s/set_motor_registers')
+        while not set_goal_position.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('service not available, waiting again...')
+        resp = set_goal_position.call_async(req)
+        rclpy.spin_until_future_complete(self, resp)
+        if resp.result() is not None:
+            self.get_logger().info(f'Goal position set response: {resp.result()}')
+        else:
+            self.get_logger().info('Goal position set request failed')
 
     def check_arm_limits(self, msg):
         joint_states = msg.position
         for i in range (0, 6):
              if abs(joint_states[i]) > 2*m.pi:
                  print('Joint limit reached')
-                 self.set_velocity([0.0]*7)
+                 self.set_velocities([0.0]*7)
+
+    def check_arm_temperature(self):
+        req = RegisterValues.Request()
+        req.cmd_type = 'group'
+        req.name = 'all'
+        req.reg = 'Present_Temperature'
+        req.value = 0
+        get_temperature = self.create_client(RegisterValues, '/wx250s/get_motor_registers')
+        while not get_temperature.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('service not available, waiting again...')
+        resp = get_temperature.call_async(req)
+        rclpy.spin_until_future_complete(self, resp)
+        if resp.result() is not None:
+            self.get_logger().info(f'Temperature check response: {resp.result()}')
+        else:
+            self.get_logger().info('Temperature check request failed')
+
+    def check_arm_velocities(self):
+        req = RegisterValues.Request()
+        req.cmd_type = 'group'
+        req.name = 'all'
+        req.reg = 'Present_Velocity'
+        req.value = 0
+        get_velocities = self.create_client(RegisterValues, '/wx250s/get_motor_registers')
+        while not get_velocities.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('service not available, waiting again...')
+        resp = get_velocities.call_async(req)
+        rclpy.spin_until_future_complete(self, resp)
+        if resp.result() is not None:
+            self.get_logger().info(f'Velocity check response: {resp.result()}')
+        else:
+            self.get_logger().info('Velocity check request failed')
     
+    def check_arm_positions(self):
+        req = RegisterValues.Request()
+        req.cmd_type = 'group'
+        req.name = 'all'
+        req.reg = 'Present_Position'
+        req.value = 0
+        get_positions = self.create_client(RegisterValues, '/wx250s/get_motor_registers')
+        while not get_positions.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('service not available, waiting again...')
+        resp = get_positions.call_async(req)
+        rclpy.spin_until_future_complete(self, resp)
+        if resp.result() is not None:
+            self.get_logger().info(f'Position check response: {resp.result()}')
+        else:
+            self.get_logger().info('Position check request failed')
+
     def set_velocities(self):
         velocities = [self.waist_velocity, self.shoulder_velocity, self.elbow_velocity, self.forearm_roll_velocity, self.wrist_angle_velocity, self.wrist_rotate_velocity, self.gripper_velocity]
         msg = JointGroupCommand()
         msg.name = 'all'
         msg.cmd = velocities
         self.velocity_publisher.publish(msg)
+        t.sleep(0.1)
 
 
 
@@ -98,12 +235,15 @@ def main(args=None):
     #7-gripper
     rclpy.init(args=args)
     interbotix_handler = interbotix_arm_handler()
-    interbotix_handler.set_mode('velocity')
-    msg = JointGroupCommand()
-    msg.name = 'all'
-    msg.cmd = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    interbotix_handler.velocity_publisher.publish(msg)
-    rclpy.spin(interbotix_handler)
+    interbotix_handler.check_arm_positions()
+    #interbotix_handler.set_mode('velocity')
+    #t.sleep(0.1)
+    #msg = JointGroupCommand()
+    #msg.name = 'all'
+    #msg.cmd = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    #t.sleep(0.1)
+    #interbotix_handler.velocity_publisher.publish(msg)
+    #rclpy.spin(interbotix_handler)
     interbotix_handler.destroy_node()
     rclpy.shutdown()
 
